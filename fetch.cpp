@@ -8,7 +8,7 @@ int main()
 {
     FILE* file = fopen("myfile.json", "rb");
     char content[65536];
-    
+    std::string text = "";
     FileReadStream istream(file, content, sizeof(content));
     Document document;
     
@@ -19,6 +19,6 @@ int main()
     std::cout <<document["abstract"][0]["text"].GetString() << std::endl << std::endl;
     
     for (const auto& paragraph : document["body_text"].GetArray())
-        std::cout << paragraph["text"].GetString() << std::endl << std::endl;
+        text += paragraph["text"].GetString() + "\n\n";
     return 0;
 }
