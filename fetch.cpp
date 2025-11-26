@@ -5,6 +5,12 @@
 using namespace rapidjson;
 namespace fsys = std::filesystem;
 
+void clean(std::string& s)
+{
+    s.erase(std::remove_if(s.begin(), s.end(), [](char c) { return ispunct(c); }), s.end());
+    if (s.length() < 3 || std::all_of(s.begin(), s.end(), isdigit)) s = "a";
+}
+
 std::string listFiles(std::string path, int& n, int& length)
 {
     const fsys::path target_path{path};
@@ -43,17 +49,17 @@ std::string fetchData(const char* fname)
         fclose(file);
 
         text += document["metadata"]["title"].GetString();
-        text += "\n\n";
+        text += " ";
         for (const auto& paragraph : document["abstract"].GetArray())
         {
             text += paragraph["text"].GetString();
-            text += "\n\n";
+            text += " ";
         }
         
         for (const auto& paragraph : document["body_text"].GetArray())
         {
             text += paragraph["text"].GetString();
-            text += "\n\n";
+            text += " ";
         }
     }
     catch (std::exception e)
@@ -64,17 +70,42 @@ std::string fetchData(const char* fname)
     return text;
 }
 
+void addLexicon(std::string content)
+{
+    std::stringstream ss;
+    std::ofstream file;
+    std::string path = "D:\\cord-19_2020-06-01\\2020-06-01\\DSA_Project\\lexicon\\", word = "";
+    int i = 0;
+    
+    fsys::create_directory(path);
+    ss << content;
+    while (ss >> word)
+    {
+        clean(word);
+        if (!fsys::exists(path + word) && word != "a")
+        {
+            file.open(path + word);
+            file << i << " " << word;
+            i++;
+            file.close();
+            file.clear();
+        }
+    }
+
+}
+
 int main()
 {
-    int n = 0, length = 0;
-    std::string path = "D:\\cord-19_2020-06-01\\2020-06-01\\sample\\", list = listFiles(path, n, length);
-    std::string *file_list = new std::string[n], *content_list = new std::string[n];
+    int n = 0, length = 0, i = 0;
+    std::string path = "D:\\cord-19_2020-06-01\\2020-06-01\\DSA_Project\\sample\\", list = listFiles(path, n, length), content = "";
+    std::string *file_list = new std::string[n];
     
-    for (int i = 0; i < n; i++)
+    
+    for (i = 0; i < n; i++)
         file_list[i] = list.substr(i*length, length);
-    for (int i = 0; i < n; i++)
-        content_list[i] = fetchData((path + file_list[i]).c_str());
+    //for (i = 0; i < n; i++)
+        content = fetchData((path + file_list[0]).c_str());
     
-    std::cout << content_list[0];
+        addLexicon(content);
     return 0;
 }
