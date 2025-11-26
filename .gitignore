@@ -1,9 +1,6 @@
 # Prerequisites
 *.d
 
-# Dataset files
-document_parses/
-
 # Compiled Object files
 *.slo
 *.lo
