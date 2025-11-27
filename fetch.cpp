@@ -5,10 +5,34 @@
 using namespace rapidjson;
 namespace fsys = std::filesystem;
 
+std::string path = ".\\lexicon\\";
+std::ofstream file;
+
 void clean(std::string& s)
 {
-    s.erase(std::remove_if(s.begin(), s.end(), [](char c) { return !(isalnum(c) || c == '-' || c == '@'); }), s.end());
-    if (s.length() < 3 || std::all_of(s.begin(), s.end(), {return !isalpha(c);})) s = "a";
+    int j = 0;
+
+    transform(s.begin(), s.end(), s.begin(), tolower);
+    if (s.length() < 3 || !all_of(str.begin(), str.end(), []char c {return isalnum(c) || c == '-' || c == '@'})) {s = "a"; return;}
+    for (char c : s)
+    {
+        j += (isalpha(c));
+        if (j == 2) return;
+    }
+    s = "a";
+}
+
+void makeEntry(std::string& word, int& i)
+{
+    clean(word);
+    if (!fsys::exists(path + word) && word != "a")
+    {
+        file.open(path + word);
+        file << i << " " << word;
+        i++;
+        file.close();
+        file.clear();
+    }
 }
 
 std::string listFiles(std::string path, int& n, int& length)
@@ -70,36 +94,23 @@ std::string fetchData(const char* fname)
     return text;
 }
 
-void addLexicon(std::string content)
+void addLexicon(std::string& content)
 {
     std::stringstream ss;
-    std::ofstream file;
-    std::string path = "D:\\DSA_Project\\DSA_Project\\lexicon\\", word = "";
+    std::string word = "";
     int i = 0;
     
     fsys::create_directory(path);
     ss << content;
     while (ss >> word)
-    {
-        clean(word);
-        if (!fsys::exists(path + word) && word != "a")
-        {
-            file.open(path + word);
-            file << i << " " << word;
-            i++;
-            file.close();
-            file.clear();
-        }
-    }
-
+        makeEntry(word, i);
 }
 
 int main()
 {
     int n = 0, length = 0, i = 0;
-    std::string path = "D:\\DSA_Project\\DSA_Project\\sample\\", list = listFiles(path, n, length), content = "";
+    std::string path = ".\\sample\\", list = listFiles(path, n, length), content = "";
     std::string *file_list = new std::string[n];
-    
     
     for (i = 0; i < n; i++)
         file_list[i] = list.substr(i*length, length);
