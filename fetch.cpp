@@ -5,31 +5,33 @@
 using namespace rapidjson;
 namespace fsys = std::filesystem;
 
-std::string path = ".\\lexicon\\";
+std::string path = ".\\lexicon\\", idfile = "count.txt";;
 std::ofstream file;
+std::ifstream infile;
+int id = 0;
 
 void clean(std::string& s)
 {
     int j = 0;
 
     transform(s.begin(), s.end(), s.begin(), tolower);
-    if (s.length() < 3 || !all_of(str.begin(), str.end(), []char c {return isalnum(c) || c == '-' || c == '@'})) {s = "a"; return;}
+    if (s.length() < 3 || !all_of(s.begin(), s.end(), [](char c) {return isalnum(c) || c == '-';})) {s = "a"; return;}
     for (char c : s)
     {
-        j += (isalpha(c));
-        if (j == 2) return;
+        if (isalpha(c)) j++;
+        if (j > 2) return;
     }
     s = "a";
 }
 
-void makeEntry(std::string& word, int& i)
+void makeEntry(std::string& word)
 {
     clean(word);
     if (!fsys::exists(path + word) && word != "a")
     {
         file.open(path + word);
-        file << i << " " << word;
-        i++;
+        file << id << " " << word;
+        id++;
         file.close();
         file.clear();
     }
@@ -98,12 +100,13 @@ void addLexicon(std::string& content)
 {
     std::stringstream ss;
     std::string word = "";
-    int i = 0;
     
     fsys::create_directory(path);
     ss << content;
     while (ss >> word)
-        makeEntry(word, i);
+        makeEntry(word);
+    file.open(idfile);
+    file << id;
 }
 
 int main()
@@ -114,6 +117,14 @@ int main()
     
     for (i = 0; i < n; i++)
         file_list[i] = list.substr(i*length, length);
+
+    if (!fsys::exists(idfile))
+    {
+        file.open(idfile);
+        file << id;
+    }
+    infile.open(idfile);
+    infile >> id;
     for (i = 0; i < n; i++)
     {
         content = fetchData((path + file_list[i]).c_str());
