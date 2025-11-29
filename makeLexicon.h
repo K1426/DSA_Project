@@ -11,9 +11,26 @@ using namespace rapidjson;
 
 // ------------- Configuration -------------
 const std::string LEXICON_FILE = "lexicon.txt";
-std::unordered_map<std::string, int> word_to_id;
+std::unordered_map<std::string, int> lexicon;
+std::unordered_map<std::string, std::unordered_map<int, std::vector<int>>> forward_index;
 int current_id = 0;
 
+void save_fwd_index(std::string& docID, int& wordID)
+{
+    std::ofstream outfile("forward_index.txt", std::ios::app);
+    if (!outfile.is_open())
+    {
+        std::cerr << "Error: Cannot open lexicon file: " << LEXICON_FILE << "\n";
+        return;
+    }
+    if (forward_index.find(docID) != forward_index.end())
+    if (forward_index[docID].find(wordID) != forward_index[docID].end())
+    {
+        outfile << docID << " " << wordID;
+        for (int pos : forward_index[docID][wordID]) outfile << " " << pos;
+        outfile << "\n";
+    }
+}
 
 void load_lexicon()
 {
@@ -24,11 +41,11 @@ void load_lexicon()
     if (infile.is_open())
     {
         std::string word;
-        while (infile >> current_id >> word) word_to_id[word] = current_id;
+        while (infile >> current_id >> word) lexicon[word] = current_id;
         infile.close();
     }
 
-    std::cout << "Loaded " << word_to_id.size() << " existing lexicon entries. current_id=" << current_id << "\n";
+    std::cout << "Loaded " << lexicon.size() << " existing lexicon entries. current_id=" << current_id << "\n";
 }
 
 // Token cleaning logic - returns cleaned token or empty string if invalid
@@ -52,7 +69,8 @@ void clean_token(std::string& token)
     if (i < 2) {token = ""; return;}
     
     // Remove common stopwords
-    static const std::unordered_set<std::string> STOPWORDS = {
+    static const std::unordered_set<std::string> STOPWORDS =
+    {
         "the","and","for","with","that","are","was","were","this","from","not",
         "have","has","had","but","can","may","into","its","between","our","their",
         "which","more","also","been","than","all","some","one","two","most","such"
@@ -63,13 +81,31 @@ void clean_token(std::string& token)
 int enter_in_lexicon(std::string& word, std::ofstream& outfile)
 {
     if (word == "") return -1;
-    if (word_to_id.find(word) == word_to_id.end())
+    if (lexicon.find(word) == lexicon.end())
     {
-        word_to_id.emplace(word, ++current_id);
+        lexicon[word] = ++current_id;
         if (outfile.is_open()) outfile << current_id << " " << word << '\n';
         else std::cout << "Warning: lexicon output stream not open. Word not written: " << word << "\n";
     }
-    return word_to_id[word];
+    return current_id;
+}
+
+// Add words from content to lexicon
+void make_lexicon_and_fwd_index(std::string& docID, std::string& content, std::ofstream& outfile)
+{
+    std::istringstream ss(content);
+    std::string word;
+    int wordID = 0, pos = 0;
+    while (ss >> word)
+    {
+        clean_token(word);
+        if (word != "")
+        {
+            wordID = enter_in_lexicon(word, outfile);
+            forward_index[docID][wordID].push_back(++pos);
+            save_fwd_index(docID, wordID);
+        }
+    }
 }
 
 // Returns vector of full file paths for regular files in directory (non-recursive)
@@ -98,7 +134,8 @@ std::string fetch_json_data(const char* fname)
 
     FILE* fp = nullptr;
     fopen_s(&fp, fname, "rb");
-    if (!fp) {
+    if (!fp)
+    {
         std::cerr << "Warning: cannot open file " << fname << "\n";
         return "";
     }
@@ -154,15 +191,45 @@ std::string fetch_json_data(const char* fname)
     return text;
 }
 
-// Add words from content to lexicon
-void make_things(const std::string& content, std::ofstream& outfile)
+int make_things(std::string& input_dir)
 {
-    std::istringstream ss(content);
-    std::string word;
-    int pos = 0, id = 0;;
-    while (ss >> word)
+    std::ofstream outfile;
+    std::string content = "", docID = "";
+    int processed = 0;
+
+    // List files in the directory
+    std::vector<std::string> files = list_files(input_dir);
+    std::cout << "Found " << files.size() << " files in directory: " << input_dir << "\n";
+
+    // Open lexicon.txt in append mode
+    outfile.open(LEXICON_FILE, std::ios::app);
+    if (!outfile.is_open())
     {
-        clean_token(word);
-        if (word != "") pos = enter_in_lexicon(word, outfile);
+        std::cerr << "Error: Cannot open lexicon file: " << LEXICON_FILE << "\n";
+        return 0;
     }
+
+    // Process files to build lexicon
+    for (std::string fpath : files)
+    {
+        docID = fpath.substr(fpath.rfind('\\') + 1);
+        content = fetch_json_data(fpath.c_str());
+        if (content == "") continue;
+
+        make_lexicon_and_fwd_index(docID, content, outfile);
+        processed++;
+
+        if (processed % 1000 == 0)
+        {
+            // Save progress every 1000 files
+            outfile.flush();
+            std::cout << "Processed " << processed << std::setw(7) << std::left 
+                << " files" << " | Current lexicon size: "
+                << lexicon.size() << "\n";
+        }
+    }
+
+    //close file
+    outfile.close();
+    return processed;
 }
