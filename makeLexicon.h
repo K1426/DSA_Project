@@ -2,33 +2,42 @@
 #include "rapidjson/filereadstream.h"
 #include <bits/stdc++.h>
 #include <filesystem>
-#include <unordered_map>
-#include <vector>
 #include <unordered_set>
 
 namespace fsys = std::filesystem;
 using namespace rapidjson;
 
-// ------------- Configuration -------------
+// Initialization of global vars
 const std::string LEXICON_FILE = "lexicon.txt";
+std::ofstream lexfile, indexfile;
 std::unordered_map<std::string, int> lexicon;
-std::unordered_map<std::string, std::unordered_map<int, std::vector<int>>> forward_index;
+std::unordered_set<std::string> parsed_docs;
+std::unordered_map<int, std::vector<int>> hits;
 int current_id = 0;
 
-void save_fwd_index(std::string& docID, int& wordID)
+void save_fwd_index(std::string& docID)
 {
-    std::ofstream outfile("forward_index.txt", std::ios::app);
-    if (!outfile.is_open())
+    if (!indexfile.is_open())
     {
-        std::cerr << "Error: Cannot open lexicon file: " << LEXICON_FILE << "\n";
+        std::cerr << "Error: forward_index.txt file not open\n";
         return;
     }
-    if (forward_index.find(docID) != forward_index.end())
-    if (forward_index[docID].find(wordID) != forward_index[docID].end())
+    if (parsed_docs.insert(docID).second)
     {
-        outfile << docID << " " << wordID;
-        for (int pos : forward_index[docID][wordID]) outfile << " " << pos;
-        outfile << "\n";
+        for (auto& [wordID, hit] : hits)
+        {
+            indexfile << docID << " " << wordID;
+            for (int pos : hit) indexfile << " " << pos;
+            indexfile << "\n";
+        }
+        std::ofstream parsed("parsed.txt", std::ios::app);
+        if (!parsed.is_open())
+        {
+            std::cerr << "Error: parsed.txt file not open\n";
+            return;
+        }
+        parsed << docID << " ";
+        parsed.close();
     }
 }
 
@@ -78,20 +87,20 @@ void clean_token(std::string& token)
     if (STOPWORDS.find(token) != STOPWORDS.end()) token = "";
 }
 
-int enter_in_lexicon(std::string& word, std::ofstream& outfile)
+int enter_in_lexicon(std::string& word)
 {
     if (word == "") return -1;
     if (lexicon.find(word) == lexicon.end())
     {
         lexicon[word] = ++current_id;
-        if (outfile.is_open()) outfile << current_id << " " << word << '\n';
+        if (lexfile.is_open()) lexfile << current_id << " " << word << '\n';
         else std::cout << "Warning: lexicon output stream not open. Word not written: " << word << "\n";
     }
     return current_id;
 }
 
 // Add words from content to lexicon
-void make_lexicon_and_fwd_index(std::string& docID, std::string& content, std::ofstream& outfile)
+void make_lexicon_and_fwd_index(std::string& docID, std::string& content)
 {
     std::istringstream ss(content);
     std::string word;
@@ -101,11 +110,12 @@ void make_lexicon_and_fwd_index(std::string& docID, std::string& content, std::o
         clean_token(word);
         if (word != "")
         {
-            wordID = enter_in_lexicon(word, outfile);
-            forward_index[docID][wordID].push_back(++pos);
-            save_fwd_index(docID, wordID);
+            wordID = enter_in_lexicon(word);
+            hits[wordID].push_back(++pos);
         }
     }
+    save_fwd_index(docID);
+    hits.clear();
 }
 
 // Returns vector of full file paths for regular files in directory (non-recursive)
@@ -191,9 +201,24 @@ std::string fetch_json_data(const char* fname)
     return text;
 }
 
+void load_parsed()
+{
+    std::ifstream infile;
+
+    // Load parsed.txt if it exists
+    infile.open("parsed.txt");
+    if (infile.is_open())
+    {
+        std::string docID;
+        while (infile >> docID) parsed_docs.insert(docID);
+        infile.close();
+    }
+}
+
 int make_things(std::string& input_dir)
 {
-    std::ofstream outfile;
+    lexfile.open(LEXICON_FILE, std::ios::app);
+    indexfile.open("forward_index.txt", std::ios::app);
     std::string content = "", docID = "";
     int processed = 0;
 
@@ -202,10 +227,14 @@ int make_things(std::string& input_dir)
     std::cout << "Found " << files.size() << " files in directory: " << input_dir << "\n";
 
     // Open lexicon.txt in append mode
-    outfile.open(LEXICON_FILE, std::ios::app);
-    if (!outfile.is_open())
+    if (!lexfile.is_open())
     {
         std::cerr << "Error: Cannot open lexicon file: " << LEXICON_FILE << "\n";
+        return 0;
+    }
+    if (!indexfile.is_open())
+    {
+        std::cerr << "Error: Cannot open forward_index.txt file\n";
         return 0;
     }
 
@@ -216,13 +245,14 @@ int make_things(std::string& input_dir)
         content = fetch_json_data(fpath.c_str());
         if (content == "") continue;
 
-        make_lexicon_and_fwd_index(docID, content, outfile);
+        make_lexicon_and_fwd_index(docID, content);
         processed++;
 
         if (processed % 1000 == 0)
         {
             // Save progress every 1000 files
-            outfile.flush();
+            lexfile.flush();
+            indexfile.flush();
             std::cout << "Processed " << processed << std::setw(7) << std::left 
                 << " files" << " | Current lexicon size: "
                 << lexicon.size() << "\n";
@@ -230,6 +260,7 @@ int make_things(std::string& input_dir)
     }
 
     //close file
-    outfile.close();
+    lexfile.close();
+    indexfile.close();
     return processed;
 }
