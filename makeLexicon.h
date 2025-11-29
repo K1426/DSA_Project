@@ -35,14 +35,14 @@ void load_lexicon()
 void clean_token(std::string& token)
 {
     int i = 0;
-    
+    if (token == "") return;
     // Trim punctuation
-    if (token != "" && std::ispunct(token[0])) token.erase(0, 1);
-    if (token != "" && std::ispunct(token[token.end()])) token.erase(token.length()-1, 1);
-    if (token.length() < 3) return;
+    token.erase(std::remove_if(token.begin(), token.end(), [](char c){return ispunct(c) && c != '-';}), token.end ());
+    
+    if (token.length() < 3) {token = ""; return;}
     
     // Discard very short tokens and non alphanumeric strings
-    if (!std::all_of(token.begin(), token.end(), [](char c) {return std::isalnum(c) || c == '-' || c === '.';})) {token = ""; return;}
+    if (!std::all_of(token.begin(), token.end(), [](char c) {return std::isalnum(c) || c == '-';})) {token = ""; return;}
 
     // Convert to lowercase
     transform(token.begin(), token.end(), token.begin(), [](char c) {return tolower(c);});
@@ -73,7 +73,8 @@ int enter_in_lexicon(std::string& word, std::ofstream& outfile)
 }
 
 // Returns vector of full file paths for regular files in directory (non-recursive)
-std::vector<std::string> list_files(std::string& dirPath) {
+std::vector<std::string> list_files(std::string& dirPath)
+{
     std::vector<std::string> files;
     try
     {
@@ -164,64 +165,4 @@ void make_things(const std::string& content, std::ofstream& outfile)
         clean_token(word);
         if (word != "") pos = enter_in_lexicon(word, outfile);
     }
-}
-
-int main()
-{
-    std::string input_dir = "D:\\cord-19_2020-06-01\\2020-06-01\\document_parses\\sample\\";
-    std::ofstream outfile;
-    int processed = 0;
-
-    // Ensure directory exists
-    if (!fsys::exists(input_dir) || !fsys::is_directory(input_dir))
-    {
-        std::cerr << "Error: Input directory does not exist → " << input_dir << "\n";
-        return 1;
-    }
-
-    // Load existing lexicon
-    load_lexicon();
-
-    // List files in the directory
-    std::vector<std::string> files = list_files(input_dir);
-    std::cout << "Found " << files.size() << " files in directory: " << input_dir << "\n";
-
-    // Open lexicon.txt in append mode
-    outfile.open(LEXICON_FILE, std::ios::app);
-    if (!outfile.is_open())
-    {
-        std::cerr << "Error: Cannot open lexicon file → " << LEXICON_FILE << "\n";
-        return 1;
-    }
-
-    // Process files to build lexicon
-    for (std::string fpath : files)
-    {
-        std::string content = fetch_json_data(fpath.c_str());
-        if (content == "") continue;
-
-        make_things(content, outfile);
-        processed++;
-
-        if (processed % 1000 == 0)
-        {
-            // Save progress every 1000 files
-            outfile.flush();
-            std::cout << "Processed " << processed << std::setw(7) << std::left 
-                << " files" << " | Current lexicon size: "
-                << word_to_id.size() << "\n";
-        }
-    }
-
-    //close file
-    outfile.close();
-
-    std::cout << "\nCompleted Successfully!\n";
-    std::cout << "Files processed: " << processed << "\n";
-    std::cout << "Lexicon size: " << word_to_id.size() << "\n";
-    std::cout << "Next available ID: " << current_id + 1 << "\n";
-    std::cout << "Output saved in:\n";
-    std::cout << "  - " << LEXICON_FILE << "\n";
-
-    return 0;
 }
