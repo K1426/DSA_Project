@@ -46,7 +46,7 @@ void clean_token(std::string& token)
     transform(token.begin(), token.end(), token.begin(), [](char c) {return tolower(c);});
 
     // Require at least two alphabetic characters
-    for (char c : token) if (std::isalpha(c)) i++;
+    for (char c : token) if ((int)c >= 97 && (int)c <= 122) i++;
     if (i < 2) {token = ""; return;}
     
     // Remove common stopwords
@@ -55,7 +55,7 @@ void clean_token(std::string& token)
         "have","has","had","but","can","may","into","its","between","our","their",
         "which","more","also","been","than","all","some","one","two","most","such"
     };
-    if (STOPWORDS.count(token)) token = "";
+    if (STOPWORDS.find(token) != STOPWORDS.end()) token = "";
 }
 
 void make_entry(std::string& word, std::ofstream& outfile)
@@ -202,7 +202,7 @@ int main()
         {
             // Save progress every 50 files
             outfile.flush();
-            std::cout << "Processed " << processed
+            std::cout << "Processed " << processed << std::setw(7) << std::left 
                 << " files | Current lexicon size: "
                 << word_to_id.size() << "\n";
         }
