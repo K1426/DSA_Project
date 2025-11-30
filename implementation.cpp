@@ -2,7 +2,7 @@
 #include "rapidjson/filereadstream.h"
 #include <bits/stdc++.h>
 #include <filesystem>
-#include "makeLexicon.h"
+#include "Lexicon_Forward.h"
 
 namespace fsys = std::filesystem;
 using namespace rapidjson;
