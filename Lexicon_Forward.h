@@ -8,7 +8,7 @@ namespace fsys = std::filesystem;
 using namespace rapidjson;
 
 // Initialization of global vars
-const std::string LEXICON_FILE = "lexicon.txt";
+const std::string LEXICON_FILE = "lexicon.txt", forward_index_file = "forward_index.txt";
 std::ofstream lexfile, indexfile;
 std::unordered_map<std::string, int> lexicon;
 std::unordered_set<std::string> parsed_docs;
@@ -30,14 +30,7 @@ void save_fwd_index(std::string& docID)
             for (int pos : hit) indexfile << " " << pos;
             indexfile << "\n";
         }
-        std::ofstream parsed("parsed.txt", std::ios::app);
-        if (!parsed.is_open())
-        {
-            std::cerr << "Error: parsed.txt file not open\n";
-            return;
-        }
-        parsed << docID << " ";
-        parsed.close();
+        parsed_docs.insert(docID);
     }
 }
 
@@ -87,6 +80,7 @@ void clean_token(std::string& token)
     if (STOPWORDS.find(token) != STOPWORDS.end()) token = "";
 }
 
+//enter word in lexicon
 int enter_in_lexicon(std::string& word)
 {
     if (word == "") return -1;
@@ -201,12 +195,16 @@ std::string fetch_json_data(const char* fname)
     return text;
 }
 
+//check for already parsed files
 void load_parsed()
 {
     std::ifstream infile;
+    //check if forward index exists
+    if (!fsys::exists(forward_index_file) || fsys::is_empty(forward_index_file)) return;
 
     // Load parsed.txt if it exists
     infile.open("parsed.txt");
+    
     if (infile.is_open())
     {
         std::string docID;
@@ -215,10 +213,23 @@ void load_parsed()
     }
 }
 
+//save record of parsed docs
+void save_parsed()
+{
+    std::ofstream parsed("parsed.txt");
+    if (!parsed.is_open())
+    {
+        std::cerr << "Error: Cannot open parsed.txt\n";
+        return;
+    }
+    for (std::string docID : parsed_docs) parsed << docID << "\n";
+    parsed.close();
+}
+
 int make_things(std::string& input_dir)
 {
     lexfile.open(LEXICON_FILE, std::ios::app);
-    indexfile.open("forward_index.txt", std::ios::app);
+    indexfile.open(forward_index_file, std::ios::app);
     std::string content = "", docID = "";
     int processed = 0;
 
@@ -250,14 +261,13 @@ int make_things(std::string& input_dir)
 
         if (processed % 1000 == 0)
         {
-            // Save progress every 1000 files
-            lexfile.flush();
-            indexfile.flush();
             std::cout << "Processed " << processed << std::setw(7) << std::left 
                 << " files" << " | Current lexicon size: "
                 << lexicon.size() << "\n";
         }
     }
+
+    save_parsed();
 
     //close file
     lexfile.close();
