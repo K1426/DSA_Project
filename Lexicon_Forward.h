@@ -14,6 +14,7 @@ std::unordered_map<std::string, int> lexicon;
 std::unordered_set<std::string> parsed_docs;
 std::unordered_map<int, std::vector<int>> hits;
 int current_id = 0;
+bool is_fwd = false;
 
 void save_fwd_index(std::string& docID)
 {
@@ -90,7 +91,7 @@ int enter_in_lexicon(std::string& word)
         if (lexfile.is_open()) lexfile << current_id << " " << word << '\n';
         else std::cout << "Warning: lexicon output stream not open. Word not written: " << word << "\n";
     }
-    return current_id;
+    return lexicon[word];
 }
 
 // Add words from content to lexicon
@@ -198,25 +199,26 @@ std::string fetch_json_data(const char* fname)
 //check for already parsed files
 void load_parsed()
 {
-    std::ifstream infile;
     //check if forward index exists
-    if (!fsys::exists(forward_index_file) || fsys::is_empty(forward_index_file)) return;
-
+    if (!fsys::exists("forward_index.txt") || fsys::is_empty("forward_index.txt")) return;
     // Load parsed.txt if it exists
-    infile.open("parsed.txt");
+    std::ifstream parsed("parsed.txt");
     
-    if (infile.is_open())
+    if (parsed.is_open())
     {
+        std::cout << " parsed open ";
         std::string docID;
-        while (infile >> docID) parsed_docs.insert(docID);
-        infile.close();
+        while (parsed >> docID) parsed_docs.insert(docID);
+        parsed.close();
     }
 }
 
 //save record of parsed docs
 void save_parsed()
 {
-    std::ofstream parsed("parsed.txt");
+    std::ofstream parsed;
+    if (is_fwd) parsed.open("parsed.txt", std::ios::app);
+    else parsed.open("parsed.txt");
     if (!parsed.is_open())
     {
         std::cerr << "Error: Cannot open parsed.txt\n";
@@ -228,7 +230,9 @@ void save_parsed()
 
 int make_things(std::string& input_dir)
 {
+    std::cout << "hhhh";
     lexfile.open(LEXICON_FILE, std::ios::app);
+    if (fsys::exists("forward_index.txt") && !fsys::is_empty("forward_index.txt")) is_fwd = true;
     indexfile.open(forward_index_file, std::ios::app);
     std::string content = "", docID = "";
     int processed = 0;
