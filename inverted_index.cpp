@@ -1,19 +1,14 @@
-#include "rapidjson/document.h"
-#include "rapidjson/filereadstream.h"
 #include <bits/stdc++.h>
-#include <filesystem>
-#include <unordered_map>
+#include "barrels.h"
 
-namespace fsys = std::filesystem;
-using namespace rapidjson;
-
-std::map<int, std::map<std::string, std::string>> inverted_index;
+std::map<int, std::map<int, std::string>> inverted_index;
+HashTable* barrel_inverted_index;
 
 //create inverted index from forward index
-void load_inverted_index()
+void build_inverted_index()
 {
-    std::string docID, hits;
-    int wordID = 0;
+    std::string hits;
+    int wordID = 0, docID = 0;
     std::ifstream fwdfile("forward_index.txt");
 
     if (!fwdfile.is_open())
@@ -47,12 +42,37 @@ void save_inverted_index()
         invfile << wordID << " " << docID << hits << "\n";
     invfile.close();
     std::cout << "Saved inverted index to file\n";
+    inverted_index.clear();
 }
 
-int main()
+void load_barrels()
 {
-    //load and save inverted index
-    load_inverted_index();
-    save_inverted_index();
-    return 0;
+    barrel_inverted_index = new HashTable(100);
+    int wordID, docID, pos;
+    std::string hit;
+    std::stringstream ss;
+    std::vector<int> hits;
+    std::ifstream invfile("inverted_index.txt");
+    Word* w;
+    
+    if (!invfile.is_open())
+    {
+        std::cerr << "Error: Cannot open inverted_index.txt file\n";
+        return;
+    }
+    
+    while (!invfile.eof())
+    {
+        invfile >> wordID >> docID;
+        getline(invfile, hit);
+        ss.str(hit);
+        while (ss >> pos) hits.push_back(pos);
+
+        w = barrel_inverted_index->get_word(wordID);
+        if (w == nullptr) w = barrel_inverted_index->insert(wordID);
+
+        w->insert_hit(docID, hits);
+        hits.clear();
+    }
+    invfile.close();
 }
