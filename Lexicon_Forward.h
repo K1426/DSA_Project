@@ -260,6 +260,7 @@ int make_things(std::string& input_dir)
         }
     }
 
+    lexicon.clear();
     lexfile.close();
     indexfile.close();
     parsed_files.close();
