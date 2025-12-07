@@ -54,7 +54,7 @@ void load_barrels()
     std::vector<int> hits;
     std::ifstream invfile("inverted_index.txt");
     Word* w;
-    
+
     if (!invfile.is_open())
     {
         std::cerr << "Error: Cannot open inverted_index.txt file\n";
@@ -67,12 +67,23 @@ void load_barrels()
         getline(invfile, hit);
         ss.str(hit);
         while (ss >> pos) hits.push_back(pos);
+        if (hits.size() == 0) {std::cout << "error"; return;}
 
         w = barrel_inverted_index->get_word(wordID);
         if (w == nullptr) w = barrel_inverted_index->insert(wordID);
 
         w->insert_hit(docID, hits);
         hits.clear();
+        ss.clear();
     }
     invfile.close();
+}
+
+int main()
+{
+    load_barrels();
+    std::ofstream f("b.txt");
+    barrel_inverted_index->save_barrels(f);
+    f.close();
+    return 0;
 }
