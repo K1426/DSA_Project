@@ -16,6 +16,16 @@ struct Word
     {
         hitlist[docID] = hit;
     }
+    void save_to_file(std::ofstream& f)
+    {
+        for (auto& [docID, hits] : hitlist)
+        {
+            f << data << " " << docID;
+            if (hits.size() == 0) {std::cout << "error " << data << " " << docID; return;}
+            for (int pos : hits) f << " " << pos;
+            f << "\n";
+        }
+    }
 };
 
 
@@ -45,7 +55,7 @@ class LinkedList
         if (head == nullptr) head = point;
         if (tail != nullptr) tail->next = point;
         tail = point;
-        return point;
+        return tail;
     }
 
     //check if a Word is here
@@ -58,6 +68,16 @@ class LinkedList
             point = point->next;
         }
         return nullptr;
+    }
+
+    void save(std::ofstream& f)
+    {
+        point = head;
+        while (point != nullptr)
+        {
+            point->save_to_file(f);
+            point = point->next;
+        }
     }
 };
 
@@ -91,4 +111,13 @@ class HashTable
     }
     
     int getcount() {return count;}
+
+    void save_barrels(std::ofstream& f)
+    {
+        for (int i = 0; i < size; i++)
+        {
+            std::cout << i << " ";
+            bucket[i].save(f);
+        }
+    }
 };
