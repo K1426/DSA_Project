@@ -5,27 +5,30 @@
 struct Word
 {
     int data;
-    std::map<int, std::vector<int>> hitlist;
+    std::vector<std::vector<int>> hitlist;
     Word* next = nullptr;
     Word() {}
     Word(int data)
     {
         this->data = data;
     }
-    void insert_hit(int docID, std::vector<int> hit)
+    void insert_hit(std::vector<int> hit)
     {
-        hitlist[docID] = hit;
+        hitlist.push_back(hit);
     }
+    /*
+    //testing purposes
     void save_to_file(std::ofstream& f)
     {
-        for (auto& [docID, hits] : hitlist)
+        for (auto& hits : hitlist)
         {
-            f << data << " " << docID;
-            if (hits.size() == 0) {std::cout << "error " << data << " " << docID; return;}
+            f << data;
+            if (hits.size() <= 1) {std::cout << "error " << data; return;}
             for (int pos : hits) f << " " << pos;
             f << "\n";
         }
     }
+    */
 };
 
 
@@ -70,6 +73,8 @@ class LinkedList
         return nullptr;
     }
 
+    /*
+    //testing purposes
     void save(std::ofstream& f)
     {
         point = head;
@@ -79,6 +84,7 @@ class LinkedList
             point = point->next;
         }
     }
+    */
 };
 
 
@@ -112,12 +118,17 @@ class HashTable
     
     int getcount() {return count;}
 
-    void save_barrels(std::ofstream& f)
+    /*
+    //testing purposes
+    void save_barrels(std::string name)
     {
+        std::ofstream f(name, std::ios::app);
         for (int i = 0; i < size; i++)
         {
             std::cout << i << " ";
             bucket[i].save(f);
         }
+        f.close();
     }
+    */
 };
