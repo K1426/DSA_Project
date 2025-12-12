@@ -42,7 +42,7 @@ int list_files(std::string& dirPath, std::vector<std::string>& files)
     std::unordered_set<std::string> parsed_files;
     int doc_ID = 0;
     std::string filepath = "";
-    std::ifstream get_docs("doc_id.txt");
+    std::ifstream get_docs("parsed_files.txt");
     if (get_docs.is_open())
     {
         while (get_docs >> doc_ID >> filepath) parsed_files.insert(filepath);
@@ -54,7 +54,7 @@ int list_files(std::string& dirPath, std::vector<std::string>& files)
         for (const auto& file : fsys::directory_iterator(dirPath))
         {
             filepath = file.path().string();
-            if (fsys::is_regular_file(file.path()) && parsed_files.insert(filepath).second)
+            if (fsys::is_regular_file(file.path()) && parsed_files.find(filepath) == parsed_files.end())
                 files.push_back(filepath);
         }
     }
@@ -259,8 +259,7 @@ int make_things(std::string& input_dir)
                 << lexicon.size() << "\n";
         }
     }
-
-    lexicon.clear();
+    
     lexfile.close();
     indexfile.close();
     parsed_files.close();
