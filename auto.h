@@ -21,7 +21,7 @@ class Trie
     {
         root = new TrieNode();
     }
-    void insert(std::string& word)
+    void insert(std::string word)
     {
         int index = -1;
         TrieNode* node = root;
@@ -37,7 +37,7 @@ class Trie
         }
         node->endofWord = true;
     }
-    bool search(std::string& word)
+    bool search(std::string word)
     {
         int index = -1;
         TrieNode* node = root;
@@ -49,7 +49,7 @@ class Trie
         }
         return node->endofWord;
     }
-    bool startsWith(std::string& prefix)
+    bool startsWith(std::string prefix)
     {
         int index = -1;
         TrieNode* node = root;
@@ -61,30 +61,30 @@ class Trie
         }
         return true;
     }
-    void print(TrieNode* node, std::string& prefix)
+    void print(TrieNode* node, std::string prefix, std::vector<std::string>& res)
     {
-        if (node->endofWord) std::cout << prefix << "\n";
+        if (node->endofWord) res.push_back(prefix);
         for (int i = 0; i < 26; i++)
             if (node->children[i] != nullptr)
-                print(node->children[i], prefix + char('a' + i));
+                print(node->children[i], prefix + char('a' + i), res);
     }
 
-    int printAutoSuggestions(std::string& query)
+    std::vector<std::string> printAutoSuggestions(std::string query)
     {
         int index = -1;
+        std::vector<std::string> res;
         TrieNode* node = root;
         for (char& c : query)
         {
             index = c - 'a';
-            if (node->children[index] == nullptr) return 0;
+            if (node->children[index] == nullptr) return {};
             node = node->children[index];
         }
         if (node->isLastNode)
         {
-            cout << query << endl;
-            return -1;
+            return {query};
         }
-        print(node, query);
-        return 1;
+        print(node, query, res);
+        return res;
     }
 };
