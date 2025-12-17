@@ -11,6 +11,7 @@ using namespace rapidjson;
 const std::string lexicon_file = "lexicon.txt", forward_index_file = "forward_index.txt";
 std::ofstream lexfile, indexfile;
 std::unordered_map<std::string, int> lexicon;
+std::vector<std::string> titles;
 int current_wordID = 0;
 bool is_fwd = false;
 
@@ -40,12 +41,18 @@ void load_lexicon()
 int list_files(std::string& dirPath, std::vector<std::string>& files)
 {
     std::unordered_set<std::string> parsed_files;
-    int doc_ID = 0;
-    std::string filepath = "";
+    int docID = 0;
+    std::string info = "";
     std::ifstream get_docs("parsed_files.txt");
     if (get_docs.is_open())
     {
-        while (get_docs >> doc_ID >> filepath) parsed_files.insert(filepath);
+        while (!get_docs.eof())
+        {
+            get_docs >> docID >> info;
+            parsed_files.insert(info);
+            getline(get_docs, info);
+            titles.push_back(info);
+        }
         get_docs.close();
     }
     
@@ -53,9 +60,9 @@ int list_files(std::string& dirPath, std::vector<std::string>& files)
     {
         for (const auto& file : fsys::directory_iterator(dirPath))
         {
-            filepath = file.path().string();
-            if (fsys::is_regular_file(file.path()) && parsed_files.find(filepath) == parsed_files.end())
-                files.push_back(filepath);
+            info = file.path().string();
+            if (fsys::is_regular_file(file.path()) && parsed_files.find(info) == parsed_files.end())
+                files.push_back(info);
         }
     }
     catch (fsys::filesystem_error& e)
@@ -64,14 +71,14 @@ int list_files(std::string& dirPath, std::vector<std::string>& files)
         exit(0);
     }
 
-    return doc_ID;
+    return docID;
 }
 
 //fetch text content from CORD-19 JSON file
-std::string parse_json(const char* fname)
+std::string parse_json(const char* fname, std::string& title)
 {
     static char readBuffer[65536];
-    std::string text;
+    std::string text = "";
 
     FILE* fp = nullptr;
     fopen_s(&fp, fname, "rb");
@@ -98,8 +105,8 @@ std::string parse_json(const char* fname)
         const Value& md = doc["metadata"];
         if (md.HasMember("title") && md["title"].IsString())
         {
-            text += md["title"].GetString();
-            text += " ";
+            title = md["title"].GetString();
+            text = title;
         }
     }
 
@@ -110,8 +117,8 @@ std::string parse_json(const char* fname)
         {
             if (para.IsObject() && para.HasMember("text") && para["text"].IsString())
             {
+                text += "\nAbstract\n";
                 text += para["text"].GetString();
-                text += " ";
             }
         }
     }
@@ -119,12 +126,13 @@ std::string parse_json(const char* fname)
     // Body text (array)
     if (doc.HasMember("body_text") && doc["body_text"].IsArray())
     {
+        text += "\nMain\n";
         for (const auto& para : doc["body_text"].GetArray())
         {
             if (para.IsObject() && para.HasMember("text") && para["text"].IsString())
             {
                 text += para["text"].GetString();
-                text += " ";
+                text += "\n";
             }
         }
     }
@@ -213,7 +221,7 @@ void save_to_fwd_index(int docID, std::unordered_map<int, std::pair<int, int>>& 
 int make_things(std::string& input_dir)
 {
     int docID = 0, processed = 0;
-    std::string content = "";
+    std::string content = "", title = "";
     std::vector<std::string> files;
     std::ofstream parsed_files;
     std::unordered_map<int, std::pair<int, int>> ranks;
@@ -245,12 +253,13 @@ int make_things(std::string& input_dir)
     for (std::string path : files)
     {
         ++docID;
-        content = parse_json(path.c_str());
+        content = parse_json(path.c_str(), title);
+        titles.push_back(title);
         if (content == "") continue;
         parse_content(content, ranks);
         save_to_fwd_index(docID, ranks);
         ranks.clear();
-        parsed_files << docID << path << std::endl;
+        parsed_files << docID << " " << path << " " << title << "\n";
         processed++;
         if (processed % 1000 == 0)
         {
