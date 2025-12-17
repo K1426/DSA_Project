@@ -13,7 +13,6 @@ std::ofstream lexfile, indexfile;
 std::unordered_map<std::string, int> lexicon;
 std::vector<std::string> titles;
 int current_wordID = 0;
-bool is_fwd = false;
 
 //allll the functions
 void load_lexicon();
@@ -72,6 +71,21 @@ int list_files(std::string& dirPath, std::vector<std::string>& files)
     }
 
     return docID;
+}
+
+//fetch content from txt
+std::string parse_txt(std::string& path, std::string& title)
+{
+    std::string content = "", temp = "";
+    std::ifstream infile(path);
+    if (!infile.is_open())
+    {
+        std::cerr << path << " not open\n";
+    }
+    getline(infile, title);
+    content = title + "\n";
+    while(getline(infile, temp)) content += temp + "\n";
+    infile.close();
 }
 
 //fetch text content from CORD-19 JSON file
