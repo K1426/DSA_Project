@@ -1,36 +1,6 @@
-#include <bits/stdc++.h>
-#include <filesystem>
 #include "Lexicon_Forward.h"
 #include "inverted_index.h"
 #include "algo.h"
-
-namespace fsys = std::filesystem;
-using namespace rapidjson;
-
-void rank(std::vector<std::vector<int>>& hitlist)
-{
-    int n = hitlist.size(), j = 0, i = 0;
-    quickSort(hitlist, 0, n-1);
-    j = 0;
-    while (j < n)
-    {
-        while (hitlist[i].size() == hitlist[j].size()) i++;
-        quickSort(hitlist, j, i-1, 0);
-        j = i;
-    }
-    for (i = 0; i < n; i++) std::cout << hitlist[i][0]<< "\n";
-}
-
-int single_search(std::string& word)
-{
-    clean_token(word);
-    if (word == "") return -1;
-    int wordID = lexicon[word];
-    std::cout << "word id " << wordID << std::endl;
-    std::vector<std::vector<int>> hitlist = barrel_inverted_index->get_word(wordID)->hitlist;
-    rank(hitlist);
-    return hitlist.size();
-}
 
 int main()
 {
@@ -56,13 +26,14 @@ int main()
         std::cout << "  - " << forward_index_file << "\n";
     }
 
-    build_inverted_index();
-    save_inverted_index();
     load_barrels();
 
-    std::string query = "something";
-    int n = single_search(query);
-    std::cout << "size " << n << std::endl;
+    std::string query = "potential";
+    std::vector<std::pair<int, float>> results = multi_search(query);
+    for (auto& [docID, rank] : results)
+    {
+        std::cout << docID << " " << titles[docID] << "\n";
+    }
+    
     return 0;
 }
-
