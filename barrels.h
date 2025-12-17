@@ -5,22 +5,22 @@
 struct Word
 {
     int data;
-    std::vector<std::vector<int>> hitlist;
+    std::vector<std::pair<int, float>> ranks;
     Word* next = nullptr;
     Word() {}
     Word(int data)
     {
         this->data = data;
     }
-    void insert_hit(std::vector<int> hit)
+    void insert_doc(int docID, float rank)
     {
-        hitlist.push_back(hit);
+        ranks.push_back({docID, rank});
     }
     /*
     //testing purposes
     void save_to_file(std::ofstream& f)
     {
-        for (auto& hits : hitlist)
+        for (auto& hits : ranks)
         {
             f << data;
             if (hits.size() <= 1) {std::cout << "error " << data; return;}
