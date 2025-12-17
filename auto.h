@@ -1,14 +1,24 @@
 //auto
+
+const int size = 37;
+
+int getindex(char c)
+{
+    if (c == '-') return size - 1;
+    if (c > 47 && c < 58) return c - 22;
+    return c - 'a';
+}
+
 struct TrieNode
 {
-    TrieNode* children[26];
+    TrieNode* children[size];
     bool endofWord;
     bool isLastNode;
     TrieNode()
     {
         endofWord = false;
         isLastNode = true;
-        for(int i = 0; i < 26; i++) children[i] = nullptr;
+        for(int i = 0; i < size; i++) children[i] = nullptr;
     }
 };
 
@@ -27,7 +37,7 @@ class Trie
         TrieNode* node = root;
         for (char& c : word)
         {
-            index = c - 'a';
+            index = getindex(c);
             if (node->children[index] == nullptr)
             {
                 node->children[index] = new TrieNode();
@@ -43,7 +53,7 @@ class Trie
         TrieNode* node = root;
         for (char& c : word)
         {
-            index = c - 'a';
+            index = getindex(c);
             if (node->children[index] == nullptr) return false;
             node = node->children[index];
         }
@@ -55,7 +65,7 @@ class Trie
         TrieNode* node = root;
         for (char& c : prefix)
         {
-            index = c - 'a';
+            index = getindex(c);
             if (node->children[index] == nullptr) return false;
             node = node->children[index];
         }
@@ -64,7 +74,7 @@ class Trie
     void print(TrieNode* node, std::string prefix, std::vector<std::string>& res)
     {
         if (node->endofWord) res.push_back(prefix);
-        for (int i = 0; i < 26; i++)
+        for (int i = 0; i < size; i++)
             if (node->children[i] != nullptr)
                 print(node->children[i], prefix + char('a' + i), res);
     }
@@ -76,7 +86,7 @@ class Trie
         TrieNode* node = root;
         for (char& c : query)
         {
-            index = c - 'a';
+            index = getindex(c);
             if (node->children[index] == nullptr) return {};
             node = node->children[index];
         }
