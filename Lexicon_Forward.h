@@ -86,6 +86,7 @@ std::string parse_txt(std::string& path, std::string& title)
     content = title + "\n";
     while(getline(infile, temp)) content += temp + "\n";
     infile.close();
+    return content;
 }
 
 //fetch text content from CORD-19 JSON file
