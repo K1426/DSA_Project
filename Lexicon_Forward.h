@@ -18,10 +18,10 @@ bool is_fwd = false;
 void load_lexicon();
 std::vector<std::string> list_files(std::string& dirPath);
 std::string parse_json(const char* fname);
-void parse_content(std::string& content, std::unordered_map<int, std::vector<int>>& hits);
+void parse_content(std::string& content, std::unordered_map<int, std::pair<int, int>>& ranks);
 void clean_token(std::string& token);
 int enter_in_lexicon(std::string& word);
-void save_to_fwd_index(int docID, std::unordered_map<int, std::vector<int>>& hits);
+void save_to_fwd_index(int docID, std::unordered_map<int, std::pair<int, int>>& ranks);
 
 //load lexicon if exists
 void load_lexicon()
@@ -133,7 +133,7 @@ std::string parse_json(const char* fname)
 }
 
 //parse content for lexicon and forward index
-void parse_content(std::string& content, std::unordered_map<int, std::vector<int>>& hits)
+void parse_content(std::string& content, std::unordered_map<int, std::pair<int, int>>& ranks)
 {
     std::istringstream ss(content);
     std::string word;
@@ -143,8 +143,10 @@ void parse_content(std::string& content, std::unordered_map<int, std::vector<int
         clean_token(word);
         if (word != "")
         {
+            ++pos;
             wordID = enter_in_lexicon(word);
-            hits[wordID].push_back(++pos);
+            ranks[wordID].first+=pos;
+            ranks[wordID].second++;
         }
     }
     
@@ -194,19 +196,17 @@ int enter_in_lexicon(std::string& word)
     return lexicon[word];
 }
 
-//save document hits in forward index
-void save_to_fwd_index(int docID, std::unordered_map<int, std::vector<int>>& hits)
+//save document ranks in forward index
+void save_to_fwd_index(int docID, std::unordered_map<int, std::pair<int, int>>& ranks)
 {
     if (!indexfile.is_open())
     {
         std::cerr << "Error: forward_index.txt file not open\n";
         exit(0);
     }
-    for (auto& [wordID, hit] : hits)
+    for (auto& [wordID, rank] : ranks)
     {
-        indexfile << docID << " " << wordID;
-        for (int pos : hit) indexfile << " " << pos;
-        indexfile << "\n";
+        indexfile << docID << " " << wordID << " " << rank.first << " " << rank.second << "\n";
     }
 }
 
@@ -216,7 +216,7 @@ int make_things(std::string& input_dir)
     std::string content = "";
     std::vector<std::string> files;
     std::ofstream parsed_files;
-    std::unordered_map<int, std::vector<int>> hits;
+    std::unordered_map<int, std::pair<int, int>> ranks;
     
     load_lexicon();
     docID = list_files(input_dir, files);
@@ -247,9 +247,9 @@ int make_things(std::string& input_dir)
         ++docID;
         content = parse_json(path.c_str());
         if (content == "") continue;
-        parse_content(content, hits);
-        save_to_fwd_index(docID, hits);
-        hits.clear();
+        parse_content(content, ranks);
+        save_to_fwd_index(docID, ranks);
+        ranks.clear();
         parsed_files << docID << path << std::endl;
         processed++;
         if (processed % 1000 == 0)
