@@ -7,51 +7,35 @@ HashTable* barrel_inverted_index;
 //create inverted index from forward index
 void build_inverted_index()
 {
-    std::string hits;
-    int wordID = 0, docID = 0;
+    int wordID = 0, docID = 0, rank = 0, size = 0;
     std::ifstream fwdfile("forward_index.txt");
-
+    std::ofstream invfile("inverted_index.txt");
     if (!fwdfile.is_open())
     {
         std::cerr << "Error: Cannot open forward_index.txt file\n";
         return;
     }
-    //in file, first is docID, second is wordID, next are hits
-    while (!fwdfile.eof())
-    {
-        fwdfile >> docID >> wordID;
-        getline(fwdfile, hits);
-        //in inverted index, first is wordID, second is docID, next are hits
-        inverted_index[wordID][docID] = hits;
-    }
-    std::cout << "Loaded inverted index from forward index\n";
-}
-
-
-//save inverted index to file
-void save_inverted_index()
-{
-    std::ofstream invfile("inverted_index.txt");
     if (!invfile.is_open())
     {
         std::cerr << "Error: Cannot open inverted_index.txt file\n";
         return;
     }
-    for (auto& [wordID, data]: inverted_index)
-    for (auto& [docID, hits]: data)
-        invfile << wordID << " " << docID << hits << "\n";
+    while (!fwdfile.eof())
+    {
+        //in forward index, first is docID, second is wordID, next are rank and size
+        fwdfile >> docID >> wordID >> rank >> size;
+        //in inverted index, first is wordID, second is docID, next are rank and size
+        invfile << wordID << " " << docID << " " << rank << " " << size << "\n";
+    }
+    std::cout << "saved inverted index to file\n";
+    fwdfile.close();
     invfile.close();
-    std::cout << "Saved inverted index to file\n";
-    inverted_index.clear();
 }
 
 void load_barrels()
 {
-    barrel_inverted_index = new HashTable(100);
-    int wordID, docID, pos;
-    std::string hit;
-    std::stringstream ss;
-    std::vector<int> hits;
+    barrel_inverted_index = new HashTable(1000);
+    int wordID, docID, rank, size;
     std::ifstream invfile("inverted_index.txt");
     Word* w;
 
@@ -63,18 +47,13 @@ void load_barrels()
     
     while (!invfile.eof())
     {
-        invfile >> wordID;
-        getline(invfile, hit);
-        ss.str(hit);
-        while (ss >> pos) hits.push_back(pos);
-        if (hits.size() == 1) {std::cout << "error"; return;}
+        invfile >> wordID >> docID >> rank >> size;
 
         w = barrel_inverted_index->get_word(wordID);
         if (w == nullptr) w = barrel_inverted_index->insert(wordID);
 
-        w->insert_hit(hits);
-        hits.clear();
-        ss.clear();
+        w->insert_doc(docID, (float)rank / (float)(size*size));
     }
     invfile.close();
+    std::cout << "loaded barrels\n";
 }
